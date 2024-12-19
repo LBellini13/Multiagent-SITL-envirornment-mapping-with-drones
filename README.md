@@ -3,7 +3,6 @@
 The main goal of this work is the following: in a Gazebo environment we need to create the instances of 2 drones, equipped with the required sensors, like a depth camera, in order to build a 3D map of the simulated environment and localize the position of the drones themselves (SLAM algorithm = Simultaneous Localization and Mapping). The tools we will employ are ROS 2 and PX4 Autopilot.
 
 >Leonardo Bellini\
->Lorenzo Grandi\
 >Lorenzo Squarzoni
 
 In the following document we'll explain all the steps required to execute a **Multiagent SITL SLAM**, based on two Iris drones equipped with a **depth camera**; the simulation will be carried out using Gazebo and Rviz2.
@@ -60,21 +59,21 @@ In the case of our iris drone equipped with the depth camera, the main link was 
 
 In order to achieve this, we must provide within the TF Tree all the transformations from */map* to */camera_link*, namely */map &rarr; /base_link &rarr; camera_link*.
 
-The scope of the **map_base_link_publ** is to provide the first transformation, from */map* to */base_link*. This operation requires to localize the drone in the environment, meaning to find its x, y, and z coordinates and orientation. These information were obtained by subscribing the */vehicle_local_position* and */vehicle_attitude* topics.
+The scope of the **map_base_link_publ** node is to provide the first transformation, from */map* to */base_link*. This operation requires to localize the drone in the environment, meaning to find its x, y, and z coordinates and orientation. These information were obtained by subscribing the */vehicle_local_position* and */vehicle_attitude* topics.
 
 Since PX4 and ROS2 use respectively ENU (East-North-Up) and NED (North-East-Down) frame conventions, we needed to apply the corresponding conversions to publish the correct */map* to */base_link* transformation(refer to https://docs.px4.io/main/en/ros2/user_guide.html#ros-2-px4-frame-conventions).
 
 To provide the second transformation, from */base_link* to */camera_link* we used the **robot_state_publisher** (https://github.com/ros/robot_state_publisher/tree/humble) and **joint_state_publisher** (https://github.com/ros/joint_state_publisher/tree/ros2) ROS2 nodes: by providing the drone description through a *.urdf* file, these two nodes manage to publish all the transformations from any frame within the drone to */base_link*.
 
-The PX4 repository provides only the *.sdf* files of the vehicles, then we generate the *.urdf* file using the *pysdf* ROS package (https://github.com/andreasBihlmaier/pysdf). The result is the *iris_depth_camera.urdf* file within the *PX4_Files* folder.
+The PX4 repository provides only the *.sdf* files of the vehicles, then we generated the *.urdf* file using the *pysdf* ROS package (https://github.com/andreasBihlmaier/pysdf). The result is the *iris_depth_camera.urdf* file within the *PX4_Files* folder.
 
 #### **PointCloud transformer**
 
-Even though the TF tree was fully generated and published, the topics associated to the camera were not automatically referred to the */map* reference frame. Consequently, we relaized a new ROS2 node, **pointcloud_transformer**, in order to provide the correct transformation of the topic's data.
+Even though the TF tree was fully generated and published, the topics associated to the camera were not automatically referred to the */map* reference frame. Consequently, we realized a new ROS2 node, **pointcloud_transformer**, in order to provide the correct transformation of the topic's data.
 
 Further more, we integrated in this node some other functionalities to improve the final mapping result. In particular:
 - the ground is removed applying a filter to all data below 0.2 meters in the z direction;
-- the pointclouds are downsampled in order to speed up the transmittion of data and remove all possible delays;
+- the pointclouds are downsampled in order to speed up the transmission of data and remove all possible delays;
 - based on the attitude topic of the drones, the data obtained when the drones are moving fast and rotating is removed, to avoid any drifting in the final octomap map; with a very little angle threshold we obtained a very good and clean result.
 
 For all the pointcluds manipulations we used the *pcl_ros* ROS2 package (https://index.ros.org/p/pcl_ros/#humble-overview, https://docs.ros.org/en/humble/p/pcl_ros/index.html)
